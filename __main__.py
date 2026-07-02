@@ -18,7 +18,7 @@ class Track:
     isrc: Optional[str]
     spotify_url: str
     is_playable: Optional[bool]
-    available_market_count: int
+    available_markets: list
 
 
 def get_required_env_var(name: str) -> str:
@@ -61,17 +61,70 @@ def connect() -> spotipy.Spotify:
     return spotify
 
 
-def get_liked_tracks():
-    return []
+def parse_track(track: dict):
+    if not track:
+        return None
+
+    if track.get("type") != "track":
+        return None
+
+    if not track.get("id") or not track.get("uri"):
+        return None
+
+    album = track.get("album") or {}
+    external_ids = track.get("external_ids") or {}
+    external_urls = track.get("external_urls") or {}
+    available_markets = track.get("available_markets") or []
+
+    return Track(
+        id=track["id"],
+        uri=track["uri"],
+        name=track.get("name", "Unknown Track"),
+        artists=[artist.get("name") for artist in track.get("artists", [])],
+        album=album.get("name", "Unknown Album"),
+        isrc=external_ids.get("isrc"),
+        spotify_url=external_urls.get("spotify", ""),
+        is_playable=track.get("is_playable"),
+        available_markets=available_markets,
+    )
+
+
+def get_liked_tracks(client: spotipy.Spotify) -> List[Track]:
+    liked_tracks = []
+    offset = 0
+    limit = 50
+
+    while True:
+        page: dict | None = client.current_user_saved_tracks(limit=limit, offset=offset)
+
+        if not page:
+            break
+
+        for item in page["items"]:
+            track = parse_track(item.get("track"))
+            if track:
+                liked_tracks.append(track)
+
+        if page["next"] is None:
+            print("finished pages")
+            break
+
+        offset += limit
+
+    return liked_tracks
 
 
 def is_unavailable(track: Track) -> bool:
-    return not track.is_playable or track.available_market_count == 0
+
+    if not track.is_playable:
+        return True
+
+    return False
 
 
 def find_unavailable_liked_tracks(client: spotipy.Spotify) -> List:
 
-    liked_tracks = get_liked_tracks()
+    liked_tracks = get_liked_tracks(client)
     unavailable_tracks = [track for track in liked_tracks if is_unavailable(track)]
     return unavailable_tracks
 
@@ -80,7 +133,10 @@ def main() -> None:
     client = connect()
 
     unavailable_liked_tracks = find_unavailable_liked_tracks(client)
-    print(unavailable_liked_tracks)
+    for unavailable_track in unavailable_liked_tracks:
+        print(
+            f"{unavailable_track.name} - {[artist + ', ' for artist in unavailable_track.artists]}"
+        )
 
 
 if __name__ == "__main__":
