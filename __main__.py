@@ -1,106 +1,9 @@
 from collections import defaultdict
-import os
-import sys
-from typing import List, Optional
-
+from typing import List
+from track import Track, parse_track
+from auth import connect
 import spotipy
-from dataclasses import dataclass
-from dotenv import load_dotenv
-from spotipy.oauth2 import SpotifyOAuth
-
-
-@dataclass
-class Track:
-    id: str
-    uri: str
-    name: str
-    artists: List[str]
-    album: str
-    isrc: Optional[str]
-    spotify_url: str
-    is_playable: Optional[bool]
-    available_markets: list
-    added_at: str
-
-    @property
-    def primary_artist(self) -> str:
-        if not self.artists:
-            return ""
-        return self.artists[0]
-
-
-def get_required_env_var(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        print(f"missing required environment variable: {name}", file=sys.stderr)
-        sys.exit(1)
-    return value
-
-
-def create_spotify_client() -> spotipy.Spotify:
-    load_dotenv()
-
-    scope = "user-read-private user-library-read playlist-read-private playlist-modify-private"
-
-    client_id = get_required_env_var("SPOTIPY_CLIENT_ID")
-    client_secret = get_required_env_var("SPOTIPY_CLIENT_SECRET")
-    redirect_uri = get_required_env_var("SPOTIPY_REDIRECT_URI")
-
-    auth_manager = SpotifyOAuth(
-        client_id=client_id,
-        client_secret=client_secret,
-        redirect_uri=redirect_uri,
-        scope=scope,
-        open_browser=True,
-    )
-
-    return spotipy.Spotify(auth_manager=auth_manager)
-
-
-def connect() -> spotipy.Spotify:
-    spotify = create_spotify_client()
-
-    user: dict | None = spotify.current_user()
-
-    if not user:
-        print("spotify connection failed. check your environment variables")
-        sys.exit(1)
-
-    return spotify
-
-
-def parse_track(item: dict):
-    if not item:
-        return None
-
-    track = item.get("track")
-
-    if not track:
-        return None
-
-    if track.get("type") != "track":
-        return None
-
-    if not track.get("id") or not track.get("uri"):
-        return None
-
-    album = track.get("album") or {}
-    external_ids = track.get("external_ids") or {}
-    external_urls = track.get("external_urls") or {}
-    available_markets = track.get("available_markets") or []
-
-    return Track(
-        id=track["id"],
-        uri=track["uri"],
-        name=track.get("name", "Unknown Track"),
-        artists=[artist.get("name") for artist in track.get("artists", [])],
-        album=album.get("name", "Unknown Album"),
-        isrc=external_ids.get("isrc"),
-        spotify_url=external_urls.get("spotify", ""),
-        is_playable=track.get("is_playable"),
-        available_markets=available_markets,
-        added_at=item["added_at"],
-    )
+import argparse
 
 
 def get_liked_tracks(client: spotipy.Spotify) -> List[Track]:
@@ -127,16 +30,8 @@ def get_liked_tracks(client: spotipy.Spotify) -> List[Track]:
     return liked_tracks
 
 
-def is_unavailable(track: Track) -> bool:
-
-    if not track.is_playable:
-        return True
-
-    return False
-
-
 def find_unavailable_liked_tracks(liked_tracks: List[Track]) -> List:
-    unavailable_tracks = [track for track in liked_tracks if is_unavailable(track)]
+    unavailable_tracks = [track for track in liked_tracks if not track.is_playable]
     return unavailable_tracks
 
 
@@ -180,7 +75,6 @@ def get_duplicate_liked_tracks_to_remove(duplicate_groups: dict[tuple, list[Trac
 
 def chunked(items, size):
     for index in range(0, len(items), size):
-        print(f"index is at {index}")
         yield items[index : index + size]
 
 
@@ -206,40 +100,78 @@ def write_liked_tracks_to_markdown(tracks: list[Track], output_path: str):
             file.write(f"- Spotify ID: `{track.id}`\n\n")
 
 
+def create_liked_songs_report(liked_songs):
+    write_liked_tracks_to_markdown(liked_songs, "liked_tracks.md")
+
+
 def main() -> None:
+
+    parser = argparse.ArgumentParser(
+        prog="spotme",
+        description="tool for managing my spotify playlists",
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="command",
+        required=True,
+    )
+
+    subparsers.add_parser(
+        "unavailable",
+        help="Find unavailable tracks in your liked songs",
+    )
+
+    subparsers.add_parser(
+        "duplicates",
+        help="Find duplicate tracks in your liked songs",
+    )
+
+    args = parser.parse_args()
+
     client = connect()
 
-    liked_songs = get_liked_tracks(client)
+    if args.command == "unavailable":
+        liked_songs = get_liked_tracks(client)
 
-    unavailable_liked_tracks = find_unavailable_liked_tracks(liked_tracks=liked_songs)
-
-    print("==== UNAVAILABLE TRACKS ====")
-    for unavailable_track in unavailable_liked_tracks:
-        print(
-            f"{unavailable_track.name} - {[artist + ', ' for artist in unavailable_track.artists]}"
+        unavailable_liked_tracks = find_unavailable_liked_tracks(
+            liked_tracks=liked_songs
         )
 
-    print("")
+        print("==== UNAVAILABLE TRACKS ====")
+        for unavailable_track in unavailable_liked_tracks:
+            print(
+                f"{unavailable_track.name} - {[artist + ', ' for artist in unavailable_track.artists]}"
+            )
+        return
 
-    duplicate_groups = find_duplicate_liked_tracks(liked_tracks=liked_songs)
-    print("==== DUPLICATE TRACKS ====")
+    if args.command == "duplicates":
+        liked_songs = get_liked_tracks(client)
+        duplicate_groups = find_duplicate_liked_tracks(liked_tracks=liked_songs)
+        print("==== DUPLICATE TRACKS ====")
 
-    for key, tracks in duplicate_groups.items():
-        print(f"- {key[0]} - {key[1]}")
-        for track in tracks:
-            print(f"\t - {track.name} : {track.id}")
+        for key, tracks in duplicate_groups.items():
+            print(f"- {key[0]} - {key[1]}")
+            for track in tracks:
+                print(f"\t - {track.name} : {track.id}")
 
-    print("")
+        print("")
 
-    duplicate_tracks_to_remove = get_duplicate_liked_tracks_to_remove(duplicate_groups)
-    print(f"will remove {len(duplicate_tracks_to_remove)} tracks from liked songs")
-    if len(duplicate_tracks_to_remove) > 0:
-        remove_tracks(client, duplicate_tracks_to_remove)
-    else:
-        print("no duplicate tracks found")
+        duplicate_tracks_to_remove = get_duplicate_liked_tracks_to_remove(
+            duplicate_groups
+        )
 
-    write_liked_tracks_to_markdown(liked_songs, "liked_tracks.md")
-    print("done")
+        print(f"will remove {len(duplicate_tracks_to_remove)} tracks from liked songs")
+
+        if len(duplicate_tracks_to_remove) > 0:
+            pass
+            # remove_tracks(client, duplicate_tracks_to_remove)
+        else:
+            pass
+            # print("no duplicate tracks found")
+        if False:
+            create_liked_songs_report(liked_songs)
+
+        print("done")
 
 
 if __name__ == "__main__":
