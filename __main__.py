@@ -123,6 +123,14 @@ def skip_song(client: spotipy.Spotify):
     return
 
 
+def pause_playback(client: spotipy.Spotify):
+    client.pause_playback()
+
+
+def start_playback(client: spotipy.Spotify):
+    client.start_playback()
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(
@@ -148,6 +156,16 @@ def main() -> None:
     subparsers.add_parser(
         "next",
         help="skip to the next song in the queue",
+    )
+
+    subparsers.add_parser(
+        "pause",
+        help="pause playback",
+    )
+
+    subparsers.add_parser(
+        "play",
+        help="start playback",
     )
 
     args = parser.parse_args()
@@ -197,6 +215,12 @@ def main() -> None:
 
     if args.command == "next":
         skip_song(client)
+
+    if args.command == "pause":
+        pause_playback(client)
+
+    if args.command == "play":
+        start_playback(client)
 
 
 if __name__ == "__main__":
