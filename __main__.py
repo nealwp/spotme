@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import sys
 from typing import List, Optional
@@ -19,6 +20,13 @@ class Track:
     spotify_url: str
     is_playable: Optional[bool]
     available_markets: list
+    added_at: str
+
+    @property
+    def primary_artist(self) -> str:
+        if not self.artists:
+            return ""
+        return self.artists[0]
 
 
 def get_required_env_var(name: str) -> str:
@@ -86,6 +94,7 @@ def parse_track(track: dict):
         spotify_url=external_urls.get("spotify", ""),
         is_playable=track.get("is_playable"),
         available_markets=available_markets,
+        added_at=track["added_at"],
     )
 
 
@@ -106,7 +115,6 @@ def get_liked_tracks(client: spotipy.Spotify) -> List[Track]:
                 liked_tracks.append(track)
 
         if page["next"] is None:
-            print("finished pages")
             break
 
         offset += limit
@@ -122,21 +130,63 @@ def is_unavailable(track: Track) -> bool:
     return False
 
 
-def find_unavailable_liked_tracks(client: spotipy.Spotify) -> List:
-
-    liked_tracks = get_liked_tracks(client)
+def find_unavailable_liked_tracks(liked_tracks: List[Track]) -> List:
     unavailable_tracks = [track for track in liked_tracks if is_unavailable(track)]
     return unavailable_tracks
+
+
+def normalize(value: str) -> str:
+    if not value:
+        return ""
+
+    return " ".join(value.lower().strip().split())
+
+
+def find_duplicate_liked_tracks(liked_tracks: List[Track]) -> dict:
+    duplicates_by_key = defaultdict(list)
+
+    for track in liked_tracks:
+        key = (normalize(track.name), normalize(track.primary_artist))
+        if not key[0] or not key[1]:
+            continue
+        duplicates_by_key[key].append(track)
+
+    duplicate_groups = {
+        key: tracks for key, tracks in duplicates_by_key.items() if len(tracks) > 1
+    }
+
+    return duplicate_groups
+
+
+def remove_liked_tracks(tracks: List[Track]):
+    track_ids_to_remove = []
+    return
 
 
 def main() -> None:
     client = connect()
 
-    unavailable_liked_tracks = find_unavailable_liked_tracks(client)
+    liked_songs = get_liked_tracks(client)
+
+    unavailable_liked_tracks = find_unavailable_liked_tracks(liked_tracks=liked_songs)
+
+    print("==== UNAVAILABLE TRACKS ====")
     for unavailable_track in unavailable_liked_tracks:
         print(
             f"{unavailable_track.name} - {[artist + ', ' for artist in unavailable_track.artists]}"
         )
+
+    print("")
+
+    duplicate_liked_tracks = find_duplicate_liked_tracks(liked_tracks=liked_songs)
+    print("==== DUPLICATE TRACKS ====")
+
+    for key, tracks in duplicate_liked_tracks.items():
+        print(f"- {key[0]} - {key[1]}")
+        for track in tracks:
+            print(f"\t - {track.name} : {track.id}")
+
+    print("")
 
 
 if __name__ == "__main__":
