@@ -190,6 +190,22 @@ def remove_tracks(client: spotipy.Spotify, track_ids: List[str]):
         client.current_user_saved_tracks_delete(tracks=batch)
 
 
+def write_liked_tracks_to_markdown(tracks: list[Track], output_path: str):
+    with open(output_path, "w", encoding="utf-8") as file:
+        file.write("# Spotify Liked Songs\n\n")
+        file.write(f"Total tracks: {len(tracks)}\n\n")
+
+        for index, track in enumerate(tracks, start=1):
+            artists = ", ".join(track.artists)
+
+            file.write(f"## {index}. {track.name}\n\n")
+            file.write(f"- Artist: {artists}\n")
+            file.write(f"- Primary artist: {track.primary_artist}\n")
+            file.write(f"- Album: {track.album}\n")
+            file.write(f"- Added: {track.added_at}\n")
+            file.write(f"- Spotify ID: `{track.id}`\n\n")
+
+
 def main() -> None:
     client = connect()
 
@@ -221,6 +237,9 @@ def main() -> None:
         remove_tracks(client, duplicate_tracks_to_remove)
     else:
         print("no duplicate tracks found")
+
+    write_liked_tracks_to_markdown(liked_songs, "liked_tracks.md")
+    print("done")
 
 
 if __name__ == "__main__":
