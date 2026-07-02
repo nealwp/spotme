@@ -54,3 +54,24 @@ def parse_track(item: dict):
         available_markets=available_markets,
         added_at=item["added_at"],
     )
+
+
+@dataclass
+class NowPlaying:
+    name: str
+    artist: str
+    album: str
+    popularity: int
+
+
+def parse_now_playing(now_playing: dict):
+    item = now_playing.get("item")
+    album = item.get("album")
+    artist = [artist.get("name") for artist in item.get("artists", [])][0]
+    popularity = item.get("popularity")
+    return NowPlaying(
+        name=item.get("name"),
+        album=album,
+        artist=artist,
+        popularity=popularity,
+    )

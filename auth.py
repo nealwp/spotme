@@ -4,6 +4,8 @@ import spotipy
 from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
 
+SCOPE = "user-read-private user-library-read playlist-read-private playlist-modify-private user-modify-playback-state user-read-currently-playing"
+
 
 def get_required_env_var(name: str) -> str:
     value = os.getenv(name)
@@ -15,9 +17,6 @@ def get_required_env_var(name: str) -> str:
 
 def create_spotify_client() -> spotipy.Spotify:
     load_dotenv()
-
-    scope = "user-read-private user-library-read playlist-read-private playlist-modify-private"
-
     client_id = get_required_env_var("SPOTIPY_CLIENT_ID")
     client_secret = get_required_env_var("SPOTIPY_CLIENT_SECRET")
     redirect_uri = get_required_env_var("SPOTIPY_REDIRECT_URI")
@@ -26,7 +25,7 @@ def create_spotify_client() -> spotipy.Spotify:
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_uri,
-        scope=scope,
+        scope=SCOPE,
         open_browser=True,
     )
 

@@ -1,7 +1,9 @@
 from collections import defaultdict
 from typing import List
-from track import Track, parse_track
+from track import Track, parse_track, parse_now_playing
 from auth import connect
+import time
+import json
 import spotipy
 import argparse
 
@@ -104,6 +106,23 @@ def create_liked_songs_report(liked_songs):
     write_liked_tracks_to_markdown(liked_songs, "liked_tracks.md")
 
 
+def skip_song(client: spotipy.Spotify):
+    client.next_track()
+    time.sleep(1)
+    current = client.currently_playing()
+    if current is None:
+        print("hmm, looks like nothing is playing")
+        return
+
+    current_track = parse_now_playing(current)
+    if current_track is None:
+        print("hmm, something went wrong parsing the track")
+        return
+
+    print(f'now playing: "{current_track.name}" - {current_track.artist}')
+    return
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(
@@ -124,6 +143,11 @@ def main() -> None:
     subparsers.add_parser(
         "duplicates",
         help="Find duplicate tracks in your liked songs",
+    )
+
+    subparsers.add_parser(
+        "next",
+        help="skip to the next song in the queue",
     )
 
     args = parser.parse_args()
@@ -171,7 +195,8 @@ def main() -> None:
         if False:
             create_liked_songs_report(liked_songs)
 
-        print("done")
+    if args.command == "next":
+        skip_song(client)
 
 
 if __name__ == "__main__":
