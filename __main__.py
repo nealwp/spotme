@@ -69,7 +69,12 @@ def connect() -> spotipy.Spotify:
     return spotify
 
 
-def parse_track(track: dict):
+def parse_track(item: dict):
+    if not item:
+        return None
+
+    track = item.get("track")
+
     if not track:
         return None
 
@@ -94,7 +99,7 @@ def parse_track(track: dict):
         spotify_url=external_urls.get("spotify", ""),
         is_playable=track.get("is_playable"),
         available_markets=available_markets,
-        added_at=track["added_at"],
+        added_at=item["added_at"],
     )
 
 
@@ -110,7 +115,7 @@ def get_liked_tracks(client: spotipy.Spotify) -> List[Track]:
             break
 
         for item in page["items"]:
-            track = parse_track(item.get("track"))
+            track = parse_track(item)
             if track:
                 liked_tracks.append(track)
 
@@ -158,9 +163,31 @@ def find_duplicate_liked_tracks(liked_tracks: List[Track]) -> dict:
     return duplicate_groups
 
 
-def remove_liked_tracks(tracks: List[Track]):
-    track_ids_to_remove = []
-    return
+def get_duplicate_liked_tracks_to_remove(duplicate_groups: dict[tuple, list[Track]]):
+    duplicate_tracks_to_remove = []
+
+    for _, tracks in duplicate_groups.items():
+        sorted_tracks = sorted(tracks, key=lambda track: track.added_at)
+        tracks_to_remove = sorted_tracks[1:]
+        for track in tracks_to_remove:
+            if track.id:
+                duplicate_tracks_to_remove.append(track.id)
+
+    duplicate_tracks_to_remove = list(dict.fromkeys(duplicate_tracks_to_remove))
+
+    return duplicate_tracks_to_remove
+
+
+def chunked(items, size):
+    for index in range(0, len(items), size):
+        print(f"index is at {index}")
+        yield items[index : index + size]
+
+
+def remove_tracks(client: spotipy.Spotify, track_ids: List[str]):
+    # spotify API limits deletes to 40 per request
+    for batch in chunked(track_ids, 40):
+        client.current_user_saved_tracks_delete(tracks=batch)
 
 
 def main() -> None:
@@ -178,15 +205,22 @@ def main() -> None:
 
     print("")
 
-    duplicate_liked_tracks = find_duplicate_liked_tracks(liked_tracks=liked_songs)
+    duplicate_groups = find_duplicate_liked_tracks(liked_tracks=liked_songs)
     print("==== DUPLICATE TRACKS ====")
 
-    for key, tracks in duplicate_liked_tracks.items():
+    for key, tracks in duplicate_groups.items():
         print(f"- {key[0]} - {key[1]}")
         for track in tracks:
             print(f"\t - {track.name} : {track.id}")
 
     print("")
+
+    duplicate_tracks_to_remove = get_duplicate_liked_tracks_to_remove(duplicate_groups)
+    print(f"will remove {len(duplicate_tracks_to_remove)} tracks from liked songs")
+    if len(duplicate_tracks_to_remove) > 0:
+        remove_tracks(client, duplicate_tracks_to_remove)
+    else:
+        print("no duplicate tracks found")
 
 
 if __name__ == "__main__":
