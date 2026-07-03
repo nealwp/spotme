@@ -128,7 +128,33 @@ def pause_playback(client: spotipy.Spotify):
 
 
 def start_playback(client: spotipy.Spotify):
+    current_playback = client.current_playback()
+    if not current_playback:
+        print("no active device")
+        return
     client.start_playback()
+
+
+def list_devices(client: spotipy.Spotify):
+    devices = client.devices()
+    print(json.dumps(devices, indent=4))
+
+
+def activate_device(client: spotipy.Spotify):
+    response = client.devices()
+
+    if not response:
+        print("no available devices")
+        return
+
+    devices: list = response.get("devices", [])
+
+    if len(devices) < 1:
+        print("no available devices")
+        return
+
+    computer = [device for device in devices if device.get("type") == "Computer"][0]
+    client.transfer_playback(device_id=computer.get("id"))
 
 
 def main() -> None:
@@ -166,6 +192,16 @@ def main() -> None:
     subparsers.add_parser(
         "play",
         help="start playback",
+    )
+
+    subparsers.add_parser(
+        "devices",
+        help="list devices",
+    )
+
+    subparsers.add_parser(
+        "activate",
+        help="activate a device",
     )
 
     args = parser.parse_args()
@@ -221,6 +257,12 @@ def main() -> None:
 
     if args.command == "play":
         start_playback(client)
+
+    if args.command == "devices":
+        list_devices(client)
+
+    if args.command == "activate":
+        activate_device(client)
 
 
 if __name__ == "__main__":
