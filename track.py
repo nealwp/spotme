@@ -56,12 +56,20 @@ def parse_track(item: dict):
     )
 
 
+GREEN = "\033[32m"
+RESET = "\033[0m"
+
+
 @dataclass
 class NowPlaying:
     name: str
     artist: str
     album: str
     popularity: int
+
+    def __str__(self):
+        album_year = self.album.get("release_date").split("-")[0]
+        return f'Now playing: {GREEN}{self.name}{RESET} | {self.artist} | {self.album.get("name")} | {album_year}'
 
 
 def parse_now_playing(now_playing: dict):

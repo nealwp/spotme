@@ -157,6 +157,24 @@ def activate_device(client: spotipy.Spotify):
     client.transfer_playback(device_id=computer.get("id"))
 
 
+def type_text(text: str, delay: float = 0.02) -> None:
+    for char in text:
+        print(char, end="", flush=True)
+        time.sleep(delay)
+
+    print()
+
+
+def now_playing(client: spotipy.Spotify):
+    current = client.currently_playing()
+    if current is None:
+        print("hmm, looks like nothing is playing")
+        return
+
+    current_track = parse_now_playing(current)
+    type_text(str(current_track))
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(
@@ -202,6 +220,11 @@ def main() -> None:
     subparsers.add_parser(
         "activate",
         help="activate a device",
+    )
+
+    subparsers.add_parser(
+        "playing",
+        help="show what's currently playing",
     )
 
     args = parser.parse_args()
@@ -263,6 +286,9 @@ def main() -> None:
 
     if args.command == "activate":
         activate_device(client)
+
+    if args.command == "playing":
+        now_playing(client)
 
 
 if __name__ == "__main__":
