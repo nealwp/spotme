@@ -1,10 +1,16 @@
 import os
 import sys
+from pathlib import Path
+
 import spotipy
 from dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
 
 SCOPE = "user-read-private user-library-read playlist-read-private playlist-modify-private user-modify-playback-state user-read-currently-playing"
+
+CONFIG_DIR = Path.home() / ".config" / "spotme"
+CACHE_DIR = Path.home() / ".cache" / "spotme"
+TOKEN_PATH = CACHE_DIR / "token"
 
 
 def get_required_env_var(name: str) -> str:
@@ -17,9 +23,12 @@ def get_required_env_var(name: str) -> str:
 
 def create_spotify_client() -> spotipy.Spotify:
     load_dotenv()
+    load_dotenv(CONFIG_DIR / ".env")
     client_id = get_required_env_var("SPOTIPY_CLIENT_ID")
     client_secret = get_required_env_var("SPOTIPY_CLIENT_SECRET")
     redirect_uri = get_required_env_var("SPOTIPY_REDIRECT_URI")
+
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     auth_manager = SpotifyOAuth(
         client_id=client_id,
@@ -27,6 +36,7 @@ def create_spotify_client() -> spotipy.Spotify:
         redirect_uri=redirect_uri,
         scope=SCOPE,
         open_browser=True,
+        cache_path=str(TOKEN_PATH),
     )
 
     return spotipy.Spotify(auth_manager=auth_manager)

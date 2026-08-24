@@ -1,6 +1,6 @@
 from typing import Any
 
-from track import Track, parse_now_playing, parse_track
+from spotme.track import Track, parse_now_playing, parse_track
 
 
 def make_track_item(track_payload: dict | None = None, **item_fields: Any) -> dict:

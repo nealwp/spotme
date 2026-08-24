@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from track import Track
+from spotme.track import Track
 
 
 def make_track(

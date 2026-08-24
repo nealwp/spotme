@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spotme"
+version = "0.1.0"
+description = "small CLI for managing my Spotify library and playback"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "spotipy==2.26.0",
+    "python-dotenv==1.2.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1"]
+
+[project.scripts]
+spotme = "spotme.cli:main"
+
+[tool.setuptools]
+packages = ["spotme"]

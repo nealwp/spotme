@@ -12,29 +12,40 @@ Built on [spotipy](https://spotipy.readthedocs.io/).
 
 ## Setup
 
-Create a virtual environment and install dependencies:
+Install with [pipx](https://pipx.pypa.io/) (recommended):
+
+```bash
+pipx install .
+```
+
+Or set up a development environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e '.[dev]'
 ```
 
-Copy the example env file and add your credentials:
+### Credentials
+
+Copy the example config and add your keys from the [Spotify developer dashboard](https://developer.spotify.com/dashboard):
 
 ```bash
-cp .env.example .env
+mkdir -p ~/.config/spotme
+cp .env.example ~/.config/spotme/.env
 ```
 
 Fill in `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET`. Keep `SPOTIPY_REDIRECT_URI` as `http://127.0.0.1:8888/callback`, and make sure that URI is added to your app's redirect URIs in the Spotify dashboard.
 
+A `.env` in the current directory also works and takes precedence — handy while developing.
+
 ## Usage
 
-Run from the repo root:
-
 ```bash
-python __main__.py <command>
+spotme <command>
 ```
+
+From a repo checkout without installing, `python -m spotme <command>` works too.
 
 | Command | Description |
 |---|---|
@@ -48,7 +59,7 @@ python __main__.py <command>
 | `unavailable` | find unavailable tracks in liked songs |
 | `duplicates` | find duplicate tracks in liked songs |
 
-The first command you run opens a browser window for OAuth login; tokens are cached locally in `.cache`.
+The first command you run opens a browser window for OAuth login; tokens are cached at `~/.cache/spotme/token`.
 
 Library commands (`unavailable`, `duplicates`) page through all of your liked songs and can take a moment on large libraries. Playback commands (`play`, `pause`, `next`, `playing`) require an active Spotify device.
 
@@ -59,6 +70,6 @@ Library commands (`unavailable`, `duplicates`) page through all of your liked so
 Tests use [pytest](https://docs.pytest.org/) and mock the Spotify API — no credentials or network needed:
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -e '.[dev]'
 python -m pytest
 ```

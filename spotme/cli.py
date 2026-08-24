@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import List
-from track import Track, parse_track, parse_now_playing
-from auth import connect
+from spotme.track import Track, parse_track, parse_now_playing
+from spotme.auth import connect
 import time
 import json
 import webbrowser
