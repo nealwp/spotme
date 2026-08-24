@@ -2,7 +2,7 @@
 
 ## Project overview
 
-spotme is a small personal Python CLI for managing a Spotify library and playback. It is built on [spotipy](https://spotipy.readthedocs.io/) and packaged as a single `spotme/` package with an installable console script — tests live in `tests/`, there is no CI configured.
+spotme is a small personal Python CLI for managing a Spotify library and playback. It is built on [spotipy](https://spotipy.readthedocs.io/), packaged as a single `spotme/` package with an installable console script, and published on PyPI as `spotme-cli` (the plain name was taken; the import package and command remain `spotme`). Tests live in `tests/`, and the only CI is the tag-triggered publish workflow.
 
 ## Setup
 
@@ -21,6 +21,10 @@ python -m pytest
 ```
 
 Tests run offline — spotipy clients are mocked with `MagicMock`, so no credentials or network calls are involved. Tests import `spotme.cli` directly via a session-scoped `cli` fixture; conftest adds the repo root to `sys.path` so the suite also works before `pip install -e .`. Tests that exercise `write_env_file` patch `spotme.auth.CONFIG_DIR` (not the cli module) since the auth functions read that global at call time.
+
+## Releasing
+
+Bump `version` in `pyproject.toml`, commit, then push a `v*` tag — `.github/workflows/publish.yml` runs the test matrix and publishes to PyPI via trusted publishing (no tokens stored in the repo). Requires a one-time "pending publisher" entry on pypi.org: owner `nealwp`, repo `spotme`, workflow `publish.yml`, project name `spotme-cli`.
 
 ## Running
 

@@ -3,21 +3,41 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spotme"
+name = "spotme-cli"
 version = "0.1.0"
-description = "small CLI for managing my Spotify library and playback"
+description = "Small CLI for managing a Spotify library and playback"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
+authors = [{ name = "nealwp" }]
+keywords = ["spotify", "cli", "music"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+]
 dependencies = [
     "spotipy==2.26.0",
     "python-dotenv==1.2.2",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1"]
+dev = ["pytest==9.1.1", "build"]
 
 [project.scripts]
 spotme = "spotme.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/nealwp/spotme"
+Repository = "https://github.com/nealwp/spotme"
+Issues = "https://github.com/nealwp/spotme/issues"
 
 [tool.setuptools]
 packages = ["spotme"]

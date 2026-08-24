@@ -12,7 +12,15 @@ Built on [spotipy](https://spotipy.readthedocs.io/).
 
 ## Setup
 
-Install with [pipx](https://pipx.pypa.io/) (recommended):
+Install from [PyPI](https://pypi.org/project/spotme-cli/) with [pipx](https://pipx.pypa.io/) (recommended):
+
+```bash
+pipx install spotme-cli
+```
+
+It's published as `spotme-cli` because the plain `spotme` name was already taken on PyPI — the command you run is still `spotme`.
+
+To install from a local checkout instead:
 
 ```bash
 pipx install .
