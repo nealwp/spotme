@@ -39,6 +39,7 @@ python __main__.py <command>
 | Command | Description |
 |---|---|
 | `playing` | show what's currently playing |
+| `start` | launch spotify and start playback |
 | `play` | start playback |
 | `pause` | pause playback |
 | `next` | skip to the next track |
@@ -50,6 +51,8 @@ python __main__.py <command>
 The first command you run opens a browser window for OAuth login; tokens are cached locally in `.cache`.
 
 Library commands (`unavailable`, `duplicates`) page through all of your liked songs and can take a moment on large libraries. Playback commands (`play`, `pause`, `next`, `playing`) require an active Spotify device.
+
+`start` shows a numbered list of your available devices to pick from, plus a `browser` option at the end. Choosing `browser` opens the [Spotify web player](https://open.spotify.com), waits for it to register as a new device, then starts playback there. Note that browser autoplay policies may require one manual click in the tab before the first remote play goes through. Any Spotify Connect device (e.g. the desktop app or a headless daemon like [spotifyd](https://github.com/Spotifyd/spotifyd)) shows up in the list automatically. Enter nothing or `q` to cancel.
 
 ## Testing
 

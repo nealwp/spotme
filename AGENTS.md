@@ -51,3 +51,4 @@ Commands: `unavailable`, `duplicates`, `next`, `pause`, `play`, `devices`, `acti
 - The Spotify API caps saved-track deletes at 40 per request (`remove_tracks` handles this via `chunked`). Liked-songs pagination uses a limit of 50.
 - Duplicate removal keeps the oldest track per `(normalized name, primary artist)` group.
 - Quirks captured by tests: `parse_track` yields `is_playable=None` (not `False`) when the key is absent despite the dataclass default, and `NowPlaying.__str__` assumes `album["release_date"]` exists.
+- The `start` command is interactive: it prints a numbered device list and prompts for a pick, with `browser` as the last option. Choosing `browser` opens the web player, then polls (`DEVICE_POLL_ATTEMPTS` × `DEVICE_POLL_INTERVAL_SECONDS`, ~30s) for a device whose id wasn't in the pre-open list. Blank input or `q` cancels; invalid picks re-prompt. Browser autoplay policy may block the first remote play until the user interacts with the tab.

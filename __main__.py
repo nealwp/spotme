@@ -4,6 +4,7 @@ from track import Track, parse_track, parse_now_playing
 from auth import connect
 import time
 import json
+import webbrowser
 import spotipy
 import argparse
 
@@ -157,6 +158,84 @@ def activate_device(client: spotipy.Spotify):
     client.transfer_playback(device_id=computer.get("id"))
 
 
+WEB_PLAYER_URL = "https://open.spotify.com"
+DEVICE_POLL_INTERVAL_SECONDS = 3
+DEVICE_POLL_ATTEMPTS = 10
+
+
+def describe_device(device: dict) -> str:
+    name = device.get("name") or "unknown device"
+    device_type = (device.get("type") or "").lower()
+    return f"{name} ({device_type})" if device_type else name
+
+
+def wait_for_device(client: spotipy.Spotify, known_ids: set) -> dict | None:
+    for _ in range(DEVICE_POLL_ATTEMPTS):
+        response = client.devices()
+        devices: list = response.get("devices", []) if response else []
+        new_devices = [device for device in devices if device.get("id") not in known_ids]
+
+        if new_devices:
+            return new_devices[0]
+
+        time.sleep(DEVICE_POLL_INTERVAL_SECONDS)
+
+    return None
+
+
+def choose_device_index(device_count: int) -> int | None:
+    browser_index = device_count + 1
+
+    while True:
+        raw = input("> ").strip().lower()
+
+        if not raw or raw in {"q", "quit"}:
+            return None
+
+        try:
+            index = int(raw)
+        except ValueError:
+            print("pick a number from the list")
+            continue
+
+        if 1 <= index <= browser_index:
+            return index
+
+        print(f"pick a number between 1 and {browser_index}")
+
+
+def start(client: spotipy.Spotify):
+    response = client.devices()
+    devices: list = response.get("devices", []) if response else []
+    known_ids = {device.get("id") for device in devices}
+
+    print("available devices:")
+    for index, device in enumerate(devices, start=1):
+        print(f"  {index}. {describe_device(device)}")
+    print(f"  {len(devices) + 1}. browser")
+
+    choice = choose_device_index(len(devices))
+
+    if choice is None:
+        print("okay, nevermind")
+        return
+
+    if choice == len(devices) + 1:
+        print("opening the web player...")
+        webbrowser.open(WEB_PLAYER_URL)
+        print("waiting for a device to show up...")
+        device = wait_for_device(client, known_ids)
+
+        if not device:
+            print("gave up waiting for a spotify device. try again once the page has loaded")
+            return
+    else:
+        device = devices[choice - 1]
+
+    client.transfer_playback(device_id=device.get("id"), force_play=True)
+    print(f'playing on "{device.get("name")}"')
+
+
 def type_text(text: str, delay: float = 0.02) -> None:
     for char in text:
         print(char, end="", flush=True)
@@ -210,6 +289,11 @@ def main() -> None:
     subparsers.add_parser(
         "play",
         help="start playback",
+    )
+
+    subparsers.add_parser(
+        "start",
+        help="launch spotify and start playback",
     )
 
     subparsers.add_parser(
@@ -280,6 +364,9 @@ def main() -> None:
 
     if args.command == "play":
         start_playback(client)
+
+    if args.command == "start":
+        start(client)
 
     if args.command == "devices":
         list_devices(client)

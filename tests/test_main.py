@@ -226,6 +226,96 @@ def test_pause_playback_delegates_to_client(cli):
     client.pause_playback.assert_called_once_with()
 
 
+def test_start_lists_devices_and_transfers_to_selected(cli, capsys, monkeypatch):
+    browser_open = MagicMock()
+    monkeypatch.setattr(cli.webbrowser, "open", browser_open)
+    monkeypatch.setattr("builtins.input", lambda *_: "2")
+    client = make_client(
+        devices={
+            "devices": [
+                {"id": "pc-1", "type": "Computer", "name": "Desktop"},
+                {"id": "speaker-1", "type": "Speaker", "name": "Kitchen Speaker"},
+            ]
+        }
+    )
+
+    cli.start(client)
+
+    client.transfer_playback.assert_called_once_with(device_id="speaker-1", force_play=True)
+    browser_open.assert_not_called()
+    out = capsys.readouterr().out
+    assert "1. Desktop (computer)" in out
+    assert "2. Kitchen Speaker (speaker)" in out
+    assert "3. browser" in out
+
+
+def test_start_browser_option_opens_web_player_and_transfers_to_new_device(cli, capsys, monkeypatch):
+    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    browser_open = MagicMock()
+    monkeypatch.setattr(cli.webbrowser, "open", browser_open)
+    monkeypatch.setattr("builtins.input", lambda *_: "2")
+    client = make_client()
+    client.devices.side_effect = [
+        {"devices": [{"id": "pc-1", "type": "Computer", "name": "Desktop"}]},
+        {"devices": [{"id": "pc-1", "type": "Computer", "name": "Desktop"}]},
+        {
+            "devices": [
+                {"id": "pc-1", "type": "Computer", "name": "Desktop"},
+                {"id": "web-1", "type": "Computer", "name": "Web Player"},
+            ]
+        },
+    ]
+
+    cli.start(client)
+
+    browser_open.assert_called_once_with(cli.WEB_PLAYER_URL)
+    client.transfer_playback.assert_called_once_with(device_id="web-1", force_play=True)
+    out = capsys.readouterr().out
+    assert "opening the web player" in out
+    assert 'playing on "Web Player"' in out
+
+
+def test_start_browser_gives_up_when_no_new_device_appears(cli, capsys, monkeypatch):
+    monkeypatch.setattr(cli.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(cli.webbrowser, "open", MagicMock())
+    monkeypatch.setattr("builtins.input", lambda *_: "1")
+    client = make_client(devices={"devices": []})
+
+    cli.start(client)
+
+    assert client.devices.call_count == 1 + cli.DEVICE_POLL_ATTEMPTS
+    client.transfer_playback.assert_not_called()
+    assert "gave up" in capsys.readouterr().out
+
+
+def test_start_reprompts_on_invalid_selection(cli, capsys, monkeypatch):
+    answers = iter(["banana", "9", "1"])
+    monkeypatch.setattr(cli.webbrowser, "open", MagicMock())
+    monkeypatch.setattr("builtins.input", lambda *_: next(answers))
+    client = make_client(
+        devices={"devices": [{"id": "pc-1", "type": "Computer", "name": "Desktop"}]}
+    )
+
+    cli.start(client)
+
+    out = capsys.readouterr().out
+    assert "pick a number from the list" in out
+    assert "pick a number between 1 and 2" in out
+    client.transfer_playback.assert_called_once_with(device_id="pc-1", force_play=True)
+
+
+def test_start_cancels_on_blank_input(cli, capsys, monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda *_: "")
+    client = make_client(
+        devices={"devices": [{"id": "pc-1", "type": "Computer", "name": "Desktop"}]}
+    )
+
+    cli.start(client)
+
+    client.transfer_playback.assert_not_called()
+    assert "nevermind" in capsys.readouterr().out
+
+
 def test_skip_song_prints_next_track(cli, capsys):
     client = MagicMock()
     client.currently_playing.return_value = make_now_playing_payload("Next Song", "Next Artist")
@@ -279,6 +369,7 @@ def test_now_playing_prints_current_track(cli, capsys, monkeypatch):
     [
         ("pause", "pause_playback"),
         ("play", "start_playback"),
+        ("start", "transfer_playback"),
         ("devices", "devices"),
         ("playing", "currently_playing"),
         ("next", "next_track"),
@@ -287,9 +378,10 @@ def test_now_playing_prints_current_track(cli, capsys, monkeypatch):
 def test_main_dispatches_playback_commands(cli, monkeypatch, command, method_name):
     client = MagicMock()
     client.current_playback.return_value = {"device": {"id": "pc"}}
-    client.devices.return_value = {"devices": []}
+    client.devices.return_value = {"devices": [{"id": "pc", "type": "Computer"}]}
     client.currently_playing.return_value = None
     monkeypatch.setattr(cli, "connect", lambda: client)
+    monkeypatch.setattr("builtins.input", lambda *_: "1")
     monkeypatch.setattr(sys, "argv", ["spotme", command])
 
     cli.main()
