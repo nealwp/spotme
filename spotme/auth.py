@@ -8,9 +8,27 @@ from spotipy.oauth2 import SpotifyOAuth
 
 SCOPE = "user-read-private user-library-read playlist-read-private playlist-modify-private user-modify-playback-state user-read-currently-playing"
 
+DEFAULT_REDIRECT_URI = "http://127.0.0.1:8888/callback"
+
 CONFIG_DIR = Path.home() / ".config" / "spotme"
 CACHE_DIR = Path.home() / ".cache" / "spotme"
 TOKEN_PATH = CACHE_DIR / "token"
+
+
+def env_file_path() -> Path:
+    return CONFIG_DIR / ".env"
+
+
+def write_env_file(client_id: str, client_secret: str, redirect_uri: str) -> Path:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    path = env_file_path()
+    path.write_text(
+        f"SPOTIPY_CLIENT_ID={client_id}\n"
+        f"SPOTIPY_CLIENT_SECRET={client_secret}\n"
+        f"SPOTIPY_REDIRECT_URI={redirect_uri}\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 def get_required_env_var(name: str) -> str:

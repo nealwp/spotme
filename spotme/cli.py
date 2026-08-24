@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import List
 from spotme.track import Track, parse_track, parse_now_playing
-from spotme.auth import connect
+from spotme.auth import DEFAULT_REDIRECT_URI, connect, env_file_path, write_env_file
 import time
 import json
 import webbrowser
@@ -244,6 +244,40 @@ def type_text(text: str, delay: float = 0.02) -> None:
     print()
 
 
+def prompt_with_default(label: str, default: str = "") -> str:
+    suffix = f" [{default}]" if default else ""
+    value = input(f"{label}{suffix}: ").strip()
+    return value or default
+
+
+def prompt_required(label: str) -> str:
+    while True:
+        value = input(f"{label}: ").strip()
+        if value:
+            return value
+        print("that one is required")
+
+
+def init_credentials():
+    env_path = env_file_path()
+
+    if env_path.exists():
+        answer = input(f"{env_path} already exists. overwrite? [y/N] ").strip().lower()
+        if answer not in {"y", "yes"}:
+            print("okay, leaving it alone")
+            return
+
+    print("grab these from https://developer.spotify.com/dashboard")
+
+    client_id = prompt_required("spotify client id")
+    client_secret = prompt_required("spotify client secret")
+    redirect_uri = prompt_with_default("redirect uri", DEFAULT_REDIRECT_URI)
+
+    written_path = write_env_file(client_id, client_secret, redirect_uri)
+    print(f"wrote {written_path}")
+    print("all set, try `spotme start`")
+
+
 def now_playing(client: spotipy.Spotify):
     current = client.currently_playing()
     if current is None:
@@ -264,6 +298,11 @@ def main() -> None:
     subparsers = parser.add_subparsers(
         dest="command",
         required=True,
+    )
+
+    subparsers.add_parser(
+        "init",
+        help="set up spotify credentials",
     )
 
     subparsers.add_parser(
@@ -312,6 +351,10 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    if args.command == "init":
+        init_credentials()
+        return
 
     client = connect()
 

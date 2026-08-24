@@ -28,7 +28,13 @@ pip install -e '.[dev]'
 
 ### Credentials
 
-Copy the example config and add your keys from the [Spotify developer dashboard](https://developer.spotify.com/dashboard):
+The quickest way is to run the setup command and answer the prompts:
+
+```bash
+spotme init
+```
+
+That writes `~/.config/spotme/.env` for you. To do it manually, copy the example config and add your keys from the [Spotify developer dashboard](https://developer.spotify.com/dashboard):
 
 ```bash
 mkdir -p ~/.config/spotme
@@ -49,6 +55,7 @@ From a repo checkout without installing, `python -m spotme <command>` works too.
 
 | Command | Description |
 |---|---|
+| `init` | set up spotify credentials |
 | `playing` | show what's currently playing |
 | `start` | launch spotify and start playback |
 | `play` | start playback |

@@ -20,7 +20,7 @@ Credentials live in `~/.config/spotme/.env` (copy from `.env.example`) with `SPO
 python -m pytest
 ```
 
-Tests run offline — spotipy clients are mocked with `MagicMock`, so no credentials or network calls are involved. Tests import `spotme.cli` directly via a session-scoped `cli` fixture; conftest adds the repo root to `sys.path` so the suite also works before `pip install -e .`.
+Tests run offline — spotipy clients are mocked with `MagicMock`, so no credentials or network calls are involved. Tests import `spotme.cli` directly via a session-scoped `cli` fixture; conftest adds the repo root to `sys.path` so the suite also works before `pip install -e .`. Tests that exercise `write_env_file` patch `spotme.auth.CONFIG_DIR` (not the cli module) since the auth functions read that global at call time.
 
 ## Running
 
@@ -28,7 +28,7 @@ Tests run offline — spotipy clients are mocked with `MagicMock`, so no credent
 spotme <command>
 ```
 
-or `python -m spotme <command>` from a checkout. Commands: `unavailable`, `duplicates`, `next`, `pause`, `play`, `start`, `devices`, `activate`, `playing`. Library commands (`unavailable`, `duplicates`) page through all liked songs; playback commands require an active Spotify device.
+or `python -m spotme <command>` from a checkout. Commands: `init`, `unavailable`, `duplicates`, `next`, `pause`, `play`, `start`, `devices`, `activate`, `playing`. Library commands (`unavailable`, `duplicates`) page through all liked songs; playback commands require an active Spotify device.
 
 ## Code layout
 
@@ -51,3 +51,4 @@ or `python -m spotme <command>` from a checkout. Commands: `unavailable`, `dupli
 - Duplicate removal keeps the oldest track per `(normalized name, primary artist)` group.
 - Quirks captured by tests: `parse_track` yields `is_playable=None` (not `False`) when the key is absent despite the dataclass default, and `NowPlaying.__str__` assumes `album["release_date"]` exists.
 - The `start` command is interactive: it prints a numbered device list and prompts for a pick, with `browser` as the last option. Choosing `browser` opens the web player, then polls (`DEVICE_POLL_ATTEMPTS` × `DEVICE_POLL_INTERVAL_SECONDS`, ~30s) for a device whose id wasn't in the pre-open list. Blank input or `q` cancels; invalid picks re-prompt. Browser autoplay policy may block the first remote play until the user interacts with the tab.
+- The `init` command dispatches before `connect()` is called — it must never trigger the OAuth flow since its purpose is setting up credentials beforehand. It prompts for client id/secret (required) and redirect uri (defaults to `DEFAULT_REDIRECT_URI`), and asks before overwriting an existing config file.

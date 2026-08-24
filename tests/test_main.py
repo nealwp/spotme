@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from spotme import auth as spotme_auth
 from spotme.track import Track
 
 
@@ -362,6 +363,78 @@ def test_now_playing_prints_current_track(cli, capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "Song Title" in out
     assert "Artist" in out
+
+
+def test_init_prompts_and_writes_config(cli, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(spotme_auth, "CONFIG_DIR", tmp_path)
+    answers = iter(["my-id", "my-secret", ""])
+    monkeypatch.setattr("builtins.input", lambda *_: next(answers))
+
+    cli.init_credentials()
+
+    env_file = tmp_path / ".env"
+    assert env_file.read_text(encoding="utf-8") == (
+        "SPOTIPY_CLIENT_ID=my-id\n"
+        "SPOTIPY_CLIENT_SECRET=my-secret\n"
+        f"SPOTIPY_REDIRECT_URI={spotme_auth.DEFAULT_REDIRECT_URI}\n"
+    )
+    out = capsys.readouterr().out
+    assert str(env_file) in out
+    assert "all set" in out
+
+
+def test_init_overwrites_existing_file_when_confirmed(cli, tmp_path, monkeypatch):
+    monkeypatch.setattr(spotme_auth, "CONFIG_DIR", tmp_path)
+    env_file = tmp_path / ".env"
+    env_file.write_text("SPOTIPY_CLIENT_ID=old\n", encoding="utf-8")
+    answers = iter(["y", "new-id", "new-secret", "http://localhost:9999/callback"])
+    monkeypatch.setattr("builtins.input", lambda *_: next(answers))
+
+    cli.init_credentials()
+
+    assert env_file.read_text(encoding="utf-8") == (
+        "SPOTIPY_CLIENT_ID=new-id\n"
+        "SPOTIPY_CLIENT_SECRET=new-secret\n"
+        "SPOTIPY_REDIRECT_URI=http://localhost:9999/callback\n"
+    )
+
+
+def test_init_keeps_existing_file_when_declined(cli, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(spotme_auth, "CONFIG_DIR", tmp_path)
+    env_file = tmp_path / ".env"
+    env_file.write_text("SPOTIPY_CLIENT_ID=old\n", encoding="utf-8")
+    monkeypatch.setattr("builtins.input", lambda *_: "n")
+
+    cli.init_credentials()
+
+    assert env_file.read_text(encoding="utf-8") == "SPOTIPY_CLIENT_ID=old\n"
+    assert "leaving it alone" in capsys.readouterr().out
+
+
+def test_init_reprompts_on_missing_client_id(cli, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(spotme_auth, "CONFIG_DIR", tmp_path)
+    answers = iter(["", "   ", "late-id", "secret", ""])
+    monkeypatch.setattr("builtins.input", lambda *_: next(answers))
+
+    cli.init_credentials()
+
+    assert "that one is required" in capsys.readouterr().out
+    content = (tmp_path / ".env").read_text(encoding="utf-8")
+    assert "SPOTIPY_CLIENT_ID=late-id" in content
+
+
+def test_init_does_not_connect_to_spotify(cli, monkeypatch):
+    connect_mock = MagicMock()
+    monkeypatch.setattr(cli, "connect", connect_mock)
+    monkeypatch.setattr(spotme_auth, "CONFIG_DIR", "/tmp/spotme-test-init")
+    monkeypatch.setattr("builtins.input", lambda *_: "")
+    monkeypatch.setattr(cli, "init_credentials", MagicMock())
+    monkeypatch.setattr(sys, "argv", ["spotme", "init"])
+
+    cli.main()
+
+    connect_mock.assert_not_called()
+    cli.init_credentials.assert_called_once_with()
 
 
 @pytest.mark.parametrize(
