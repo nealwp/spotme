@@ -50,3 +50,12 @@ python __main__.py <command>
 The first command you run opens a browser window for OAuth login; tokens are cached locally in `.cache`.
 
 Library commands (`unavailable`, `duplicates`) page through all of your liked songs and can take a moment on large libraries. Playback commands (`play`, `pause`, `next`, `playing`) require an active Spotify device.
+
+## Testing
+
+Tests use [pytest](https://docs.pytest.org/) and mock the Spotify API — no credentials or network needed:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
