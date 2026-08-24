@@ -80,6 +80,18 @@ Library commands (`unavailable`, `duplicates`) page through all of your liked so
 
 `start` shows a numbered list of your available devices to pick from, plus a `browser` option at the end. Choosing `browser` opens the [Spotify web player](https://open.spotify.com), waits for it to register as a new device, then starts playback there. Note that browser autoplay policies may require one manual click in the tab before the first remote play goes through. Any Spotify Connect device (e.g. the desktop app or a headless daemon like [spotifyd](https://github.com/Spotifyd/spotifyd)) shows up in the list automatically. Enter nothing or `q` to cancel.
 
+## Roadmap
+
+Ideas for future versions, roughly in priority order:
+
+- `dedupe` — actually remove duplicate liked songs (with a preview + confirmation)
+- `export` — back up liked songs as markdown, csv, or json
+- `volume` — set or nudge playback volume
+- search & queue — search spotify and append results to the live queue
+- playlists — create playlists and manage their contents from the cli
+- saved preferences — remember your default device so playback commands skip the picker
+- history — recently played tracks, plus a follow mode for now playing
+
 ## Testing
 
 Tests use [pytest](https://docs.pytest.org/) and mock the Spotify API — no credentials or network needed:
